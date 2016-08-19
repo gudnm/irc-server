@@ -11,20 +11,19 @@ class Server:
 
 	def handle(self, message, conn):
 		messageparts = message.split()
-		print(messageparts)
 		if messageparts[0] in self.commands:
-			try:
-				print(conn, messageparts[1:])
+#			try:
+			print(conn, messageparts[1:])
 #				pdb.set_trace()
-				self.commands[messageparts[0]][1](conn, *messageparts[1:])
-			except TypeError:
-				print('wrong number of parameters')
+			self.commands[messageparts[0]][1](conn, messageparts[1:])
+#			except TypeError:
+#				print('wrong number of parameters')
 
-	def nick(self, _, nick):
+	def nick(self, _, messageparts):
 		print('got NICK command')
-		self.session = nick
+		self.session = messageparts[0]
 
-	def user(self, conn, *args):
+	def user(self, conn, args):
 		print('got USER command')
 		print(self.session, args[0])
 		if self.session != args[0]:
@@ -35,8 +34,9 @@ class Server:
 			message = reply.prefix + ' ' + Reply.codes['RPL_WELCOME'] + ' :' + reply.text + ' ' + reply.nick + '!' + reply.nick + '@' + reply.host
 			conn.send(message.encode('ascii'))
 
-	def quit(self, conn):
-		conn.send('Bye!')
+	def quit(self, conn, args=None):
+		print('got QUIT command')
+		conn.send('Bye!'.encode('ascii'))
 		conn.close()
 		self.session = None
 
@@ -80,14 +80,19 @@ if __name__ == '__main__':
 	 
 	server = Server()
 	s = socket.socket()
+	print(s)
 	server.addr = socket.gethostname()
 	port = int(sys.argv[1])
 	s.bind((server.addr, port))
 	s.listen(5)
 	while True:
 		conn, addr = s.accept()
-		print('Connection from ' + str(addr))
+		print('connection from ' + str(addr))
 		while True:
-			message = conn.recv(1024).decode('ASCII')
-			server.handle(message, conn)
-		#conn.close()
+			try:
+				message = conn.recv(1024).decode('ASCII')
+				server.handle(message, conn)
+			except OSError:
+				print("connection closed")
+				#s.close()
+				break
